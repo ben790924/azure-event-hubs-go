@@ -611,14 +611,14 @@ func (h *Hub) closeReceivers(ctx context.Context) error {
 // ListenerHandle.Done() signals the consumer when the receiver has stopped
 //
 // ListenerHandle.Err() provides the last error the listener encountered and was unable to recover from
-func (h *Hub) Receive(ctx context.Context, partitionID string, handler Handler, opts ...ReceiveOption) (*ListenerHandle, error) {
+func (h *Hub) Receive(ctx context.Context, partitionID, consumerGroup string, handler Handler, opts ...ReceiveOption) (*ListenerHandle, error) {
 	span, ctx := h.startSpanFromContext(ctx, "eh.Hub.Receive")
 	defer span.End()
 
 	h.receiverMu.Lock()
 	defer h.receiverMu.Unlock()
 
-	receiver, err := h.newReceiver(ctx, partitionID, opts...)
+	receiver, err := h.newReceiver(ctx, partitionID, consumerGroup, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -681,7 +681,6 @@ func (h *Hub) SendBatch(ctx context.Context, iterator BatchIterator, opts ...Bat
 		}
 
 		batch, err := iterator.Next(id.String(), batchOptions)
-
 		if err != nil {
 			tab.For(ctx).Error(err)
 			return err

@@ -132,13 +132,18 @@ func ReceiveWithEpoch(epoch int64) ReceiveOption {
 }
 
 // newReceiver creates a new Service Bus message listener given an AMQP client and an entity path
-func (h *Hub) newReceiver(ctx context.Context, partitionID string, opts ...ReceiveOption) (*receiver, error) {
+func (h *Hub) newReceiver(ctx context.Context, partitionID, consumerGroup string, opts ...ReceiveOption) (*receiver, error) {
 	span, ctx := h.startSpanFromContext(ctx, "eh.Hub.newReceiver")
 	defer span.End()
-
+	var cg string
+	if consumerGroup == "" {
+		cg = DefaultConsumerGroup
+	} else {
+		cg = consumerGroup
+	}
 	receiver := &receiver{
 		hub:           h,
-		consumerGroup: DefaultConsumerGroup,
+		consumerGroup: cg,
 		prefetchCount: defaultPrefetchCount,
 		partitionID:   partitionID,
 	}
@@ -383,7 +388,6 @@ func (r *receiver) newSessionAndLink(ctx context.Context) error {
 	}
 
 	checkpoint, err := r.getLastReceivedCheckpoint()
-
 	if err != nil {
 		tab.For(ctx).Error(err)
 		return err
